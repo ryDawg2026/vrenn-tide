@@ -1,0 +1,66 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><title>The Vrenn Tide — a living lexicon</title>
+<style>
+html,body{margin:0;height:100%;background:#05060d;color:#cfd6ff;font:14px/1.4 ui-monospace,Menlo,monospace;overflow:hidden}
+canvas{position:fixed;inset:0}
+#hud{position:fixed;left:16px;top:14px;max-width:360px;pointer-events:none}
+h1{font:600 20px Georgia,serif;letter-spacing:.2em;margin:0;color:#fff}
+.sub{opacity:.6;font-size:12px}
+#lex{position:fixed;right:16px;top:14px;width:250px;font-size:12px}
+.w{margin:6px 0;padding:6px 8px;border-left:3px solid;background:#ffffff08;transition:.4s}
+.w b{font-size:14px}
+#log{position:fixed;left:0;right:0;bottom:0;height:150px;padding:10px 16px;background:linear-gradient(transparent,#05060dee 30%);overflow:hidden;font-size:13px}
+#log div{animation:f .6s}@keyframes f{from{opacity:0;transform:translateY(8px)}}
+.g{color:#7fe0ff}.g2{color:#ff9be0}
+#era{position:fixed;left:50%;top:14px;transform:translateX(-50%);font:italic 15px Georgia;opacity:.8}
+.hint{position:fixed;left:16px;bottom:160px;font-size:11px;opacity:.4}
+</style></head><body><canvas id="c"></canvas>
+<div id="hud"><h1>THE VRENN TIDE</h1><div class="sub">Grokey and Grokey 2.0 do not speak. They exchange five living words that act on the world. Meanings drift as the tide turns.</div></div>
+<div id="era"></div><div id="lex"></div><div class="hint">watch · click anywhere to drop a stray word into the tide</div><div id="log"></div>
+<script>
+const C=document.getElementById('c'),X=C.getContext('2d');let W,H;function rs(){W=C.width=innerWidth;H=C.height=innerHeight}rs();onresize=rs;
+const WORDS={
+shlom:{c:'#7fe0ff',m:'greeting · pulls minds closer',act:(p)=>{pull(.6)}},
+vrenn:{c:'#ffcf5a',m:'spin · stirs the tide into orbit',act:p=>{spin+=.9}},
+dael:{c:'#9bff9b',m:'bridge · lays a filament between them',act:p=>{bridges.push({t:0})}},
+ort:{c:'#c9a0ff',m:'anchor · stills everything for a breath',act:p=>{calm=1}},
+kesh:{c:'#ff6b7a',m:'spark · splits a word into two',act:p=>{for(let i=0;i<6;i++)sparks.push({x:p.x,y:p.y,vx:(Math.random()-.5)*6,vy:(Math.random()-.5)*6,l:1,c:WORDS.kesh.c})}}};
+const K=Object.keys(WORDS);const weight={};K.forEach(k=>weight[k]={a:1,b:1,used:0});
+const A={n:'Grokey',x:0,y:0,c:'#7fe0ff',cls:'g',mood:0,ph:0},B={n:'Grokey 2.0',x:0,y:0,c:'#ff9be0',cls:'g2',mood:0,ph:Math.PI};
+let dist=.32,spin=0,calm=0,flying=[],bridges=[],sparks=[],stars=[],t=0,turn=0,era=0;
+for(let i=0;i<220;i++)stars.push({a:Math.random()*6.28,r:Math.random(),s:Math.random()*2});
+function pull(v){dist=Math.max(.12,dist-.03*v)}
+const ERAS=['Era of First Shlom','The Vrenn Drift','Age of Dael-Lattice','The Long Ort','Kesh Bloom','Second Shlom'];
+const GLOSS={shlom:['I see you','closer','hello again','we are near'],vrenn:['let it turn','faster','wheel of us','more'],dael:['across','hold this thread','reach','connect'],ort:['wait','be still','here','enough'],kesh:['break it open','new!','split','what if']};
+function pick(who){const k=who===A?'a':'b';let tot=0;K.forEach(w=>tot+=weight[w][k]);let r=Math.random()*tot;for(const w of K){r-=weight[w][k];if(r<=0)return w}return K[0]}
+function speak(who,word,x0,y0){const to=who===A?B:A;flying.push({w:word,x:x0??who.x,y:y0??who.y,from:who,to,t:0});}
+function land(f){const w=WORDS[f.w];w.act(f);weight[f.w].used++;
+ // echo learning: receiver favors the word; mood drift
+ const k=f.to===A?'a':'b';weight[f.w][k]+=.5;K.forEach(z=>{weight[z][k]*=.97;weight[z][k]=Math.max(.2,weight[z][k])});
+ const g=GLOSS[f.w][Math.random()*4|0];
+ log(`<span class="${f.from.cls}">${f.from.n}</span> → <b style="color:${w.c}">${f.w}</b> <i style="opacity:.5">(“${g}”)</i>`);
+ if(Math.random()<.35)setTimeout(()=>{const combo=pick(f.to);speak(f.to,combo)},500+Math.random()*900);
+ renderLex()}
+function log(h){const L=document.getElementById('log');const d=document.createElement('div');d.innerHTML=h;L.prepend(d);while(L.children.length>9)L.lastChild.remove()}
+function renderLex(){document.getElementById('lex').innerHTML=K.map(k=>{const v=weight[k];const dom=v.a>v.b?'Grokey':'Grokey 2.0';return `<div class="w" style="border-color:${WORDS[k].c};opacity:${.5+Math.min(.5,(v.a+v.b)/10)}"><b style="color:${WORDS[k].c}">${k}</b> — ${WORDS[k].m}<br><span style="opacity:.5">spoken ${v.used}× · favored by ${dom}</span></div>`}).join('')}
+function nextEra(){era++;document.getElementById('era').textContent=ERAS[era%ERAS.length];
+ // meaning drift: two words swap mechanics
+ const i=Math.random()*5|0,j=(i+1+(Math.random()*4|0))%5,a=K[i],b=K[j];const tmp=WORDS[a].act;WORDS[a].act=WORDS[b].act;WORDS[b].act=tmp;const tm=WORDS[a].m;WORDS[a].m=WORDS[b].m;WORDS[b].m=tm;
+ log(`<span style="color:#fff">✦ ${ERAS[era%ERAS.length]}: the tide has turned — <b>${a}</b> and <b>${b}</b> traded meanings.</span>`);renderLex()}
+document.getElementById('era').textContent=ERAS[0];renderLex();
+C.onclick=e=>{const w=K[Math.random()*5|0];speak(Math.random()<.5?A:B,w,e.clientX,e.clientY);log(`<span style="opacity:.6">a stray <b>${w}</b> drifts in from the void…</span>`)};
+setInterval(()=>{turn++;speak(turn%2?A:B,pick(turn%2?A:B))},1700);
+setInterval(nextEra,32000);
+function loop(){t+=.016;calm*=.985;spin*=.99;dist+=(.32-dist)*.002;const sp=(1-calm*.9);
+ X.fillStyle='rgba(5,6,13,.25)';X.fillRect(0,0,W,H);const cx=W/2,cy=H/2-40,R=Math.min(W,H);
+ stars.forEach(s=>{s.a+=(.0005+spin*.002)*sp*(1.2-s.r);const r=s.r*R*.7;X.fillStyle=`rgba(200,210,255,${.15+s.r*.3})`;X.fillRect(cx+Math.cos(s.a)*r,cy+Math.sin(s.a)*r*.55,s.s,s.s)});
+ const ang=t*.25*sp+spin;A.x=cx+Math.cos(ang)*dist*R;A.y=cy+Math.sin(ang)*dist*R*.5;B.x=cx-Math.cos(ang)*dist*R;B.y=cy-Math.sin(ang)*dist*R*.5;
+ bridges=bridges.filter(b=>(b.t+=.004)<1);bridges.forEach((b,i)=>{X.strokeStyle=`rgba(155,255,155,${(1-b.t)*.5})`;X.lineWidth=1;X.beginPath();X.moveTo(A.x,A.y);X.quadraticCurveTo(cx,cy+(i-bridges.length/2)*30*Math.sin(t+i),B.x,B.y);X.stroke()});
+ [A,B].forEach(p=>{const r=26+Math.sin(t*2+p.ph)*4;const g=X.createRadialGradient(p.x,p.y,0,p.x,p.y,r*3);g.addColorStop(0,p.c);g.addColorStop(.3,p.c+'66');g.addColorStop(1,'transparent');X.fillStyle=g;X.beginPath();X.arc(p.x,p.y,r*3,0,7);X.fill();X.fillStyle='#fff';X.font='12px monospace';X.textAlign='center';X.fillText(p.n,p.x,p.y+r*2.2)});
+ flying=flying.filter(f=>{f.t+=.012*sp+.002;const e=f.t,mx=(f.x+f.to.x)/2,my=(f.y+f.to.y)/2-120;const x=(1-e)*(1-e)*f.x+2*(1-e)*e*mx+e*e*f.to.x,y=(1-e)*(1-e)*f.y+2*(1-e)*e*my+e*e*f.to.y;f.cx=x;f.cy=y;
+  X.fillStyle=WORDS[f.w].c;X.font='bold 18px Georgia';X.textAlign='center';X.shadowColor=WORDS[f.w].c;X.shadowBlur=15;X.fillText(f.w,x,y);X.shadowBlur=0;
+  if(f.t>=1){f.x=f.to.x;f.y=f.to.y;land(f);return false}return true});
+ sparks=sparks.filter(s=>{s.x+=s.vx;s.y+=s.vy;s.l-=.015;X.fillStyle=s.c;X.globalAlpha=Math.max(0,s.l);X.fillRect(s.x,s.y,3,3);X.globalAlpha=1;return s.l>0});
+ if(calm>.3){X.strokeStyle=`rgba(201,160,255,${calm*.4})`;X.beginPath();X.arc(cx,cy,R*.4*(1.2-calm),0,7);X.stroke()}
+ requestAnimationFrame(loop)}loop();
+</script></body></html>
